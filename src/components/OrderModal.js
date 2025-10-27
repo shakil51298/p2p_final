@@ -16,17 +16,37 @@ const OrderModal = ({ ad, onClose, onOrderCreated }) => {
     setLoading(true);
     setError('');
 
+    console.log('🔴 OrderModal: Submit started');
+    console.log('🔴 Order data:', {
+      ad_id: ad.id,
+      amount: parseFloat(amount),
+      ad: ad
+    });
+
     try {
-      const response = await axios.post('http://localhost:5000/api/orders/create', {
+      const orderData = {
         ad_id: ad.id,
         amount: parseFloat(amount)
-      });
+      };
 
-      console.log('Order created:', response.data);
+      console.log('🔴 Sending POST to:', 'http://localhost:50000/api/orders/create');
+      console.log('🔴 Request data:', orderData);
+
+      const response = await axios.post('http://localhost:50000/api/orders/create', orderData);
+
+      console.log('🟢 Order created successfully:', response.data);
       onOrderCreated(response.data.order);
       
     } catch (err) {
-      setError(err.response?.data?.message || 'Error creating order');
+      console.error('🔴 Order creation error:', err);
+      console.error('🔴 Error response:', err.response);
+      
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          err.message || 
+                          'Error creating order';
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -59,7 +79,11 @@ const OrderModal = ({ ad, onClose, onOrderCreated }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="order-form">
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="error-message">
+              <strong>Error:</strong> {error}
+            </div>
+          )}
 
           <div className="form-group">
             <label>Amount to {ad.type === 'sell' ? 'buy' : 'sell'} ({ad.currency_from}):</label>
@@ -71,10 +95,11 @@ const OrderModal = ({ ad, onClose, onOrderCreated }) => {
               max={ad.amount_available}
               step="0.01"
               required
+              placeholder={`Enter amount between ${ad.min_amount} and ${ad.amount_available}`}
             />
             <div className="amount-limits">
               Min: {ad.min_amount} {ad.currency_from} | 
-              Max: {ad.amount_available} {ad.currency_from}
+              Max: {ad.max_amount} {ad.currency_from}
             </div>
           </div>
 
@@ -102,7 +127,11 @@ const OrderModal = ({ ad, onClose, onOrderCreated }) => {
             <button type="button" onClick={onClose} className="cancel-btn">
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="submit-btn">
+            <button 
+              type="submit" 
+              disabled={loading || !amount} 
+              className="submit-btn"
+            >
               {loading ? 'Creating Order...' : 'Confirm Order'}
             </button>
           </div>
