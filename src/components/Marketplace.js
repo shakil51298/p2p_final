@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import CreateAdModal from './CreateAdModal.js';
+import CreateAdModal from './CreateAdModal';
+import OrderModal from './OrderModal';
 
 const Marketplace = ({ user }) => {
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [filter, setFilter] = useState('all'); // all, buy, sell
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedAd, setSelectedAd] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     fetchAds();
@@ -31,6 +34,90 @@ const Marketplace = ({ user }) => {
   const handleAdCreated = () => {
     setShowCreateModal(false);
     fetchAds(); // Refresh the list
+  };
+
+  const handleStartTrade = (ad) => {
+    console.log('Starting trade with ad:', ad);
+    setSelectedAd(ad);
+    setShowOrderModal(true);
+  };
+
+  const handleOrderCreated = (order) => {
+    setShowOrderModal(false);
+    setSelectedAd(null);
+    fetchAds(); // Refresh ads to update available amounts
+    alert(`Order created successfully! Order ID: ${order.id}`);
+  };
+
+  // Ad Card Component - Moved INSIDE Marketplace component
+  const AdCard = ({ ad }) => {
+    const getTypeColor = () => {
+      return ad.type === 'buy' ? '#28a745' : '#dc3545';
+    };
+
+    const getTypeText = () => {
+      return ad.type === 'buy' ? 'Wants to BUY' : 'Wants to SELL';
+    };
+
+    return (
+      <div className="ad-card">
+        <div className="ad-header">
+          <div className="ad-type" style={{ backgroundColor: getTypeColor() }}>
+            {getTypeText()}
+          </div>
+          <div className="ad-rate">
+            1 {ad.currency_from} = {ad.exchange_rate} {ad.currency_to}
+          </div>
+        </div>
+
+        <div className="ad-body">
+          <div className="ad-currencies">
+            <span className="currency-from">{ad.currency_from}</span>
+            <span className="arrow">→</span>
+            <span className="currency-to">{ad.currency_to}</span>
+          </div>
+
+          <div className="ad-details">
+            <div className="detail">
+              <label>Available:</label>
+              <span>{ad.amount_available} {ad.currency_from}</span>
+            </div>
+            <div className="detail">
+              <label>Limits:</label>
+              <span>{ad.min_amount} - {ad.max_amount} {ad.currency_from}</span>
+            </div>
+          </div>
+
+          <div className="payment-methods">
+            <label>Payment Methods:</label>
+            <div className="methods-list">
+              {ad.payment_methods.map((method, index) => (
+                <span key={index} className="payment-method">{method}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="seller-info">
+            <div className="seller-name">
+              <span className="seller-label">Seller:</span>
+              <span>{ad.seller_name}</span>
+              {ad.seller_kyc_status === 'verified' && (
+                <span className="kyc-badge">✅ KYC</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="ad-footer">
+          <button 
+            className="trade-btn"
+            onClick={() => handleStartTrade(ad)}
+          >
+            Start Trade
+          </button>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -68,7 +155,7 @@ const Marketplace = ({ user }) => {
           <button 
             className="create-ad-btn"
             onClick={() => setShowCreateModal(true)}
-            disabled={false}  
+            disabled={false}
           >
             + Create New Ad
           </button>
@@ -95,74 +182,17 @@ const Marketplace = ({ user }) => {
           user={user}
         />
       )}
-    </div>
-  );
-};
 
-// Ad Card Component
-const AdCard = ({ ad }) => {
-  const getTypeColor = () => {
-    return ad.type === 'buy' ? '#28a745' : '#dc3545';
-  };
-
-  const getTypeText = () => {
-    return ad.type === 'buy' ? 'Wants to BUY' : 'Wants to SELL';
-  };
-
-  return (
-    <div className="ad-card">
-      <div className="ad-header">
-        <div className="ad-type" style={{ backgroundColor: getTypeColor() }}>
-          {getTypeText()}
-        </div>
-        <div className="ad-rate">
-          1 {ad.currency_from} = {ad.exchange_rate} {ad.currency_to}
-        </div>
-      </div>
-
-      <div className="ad-body">
-        <div className="ad-currencies">
-          <span className="currency-from">{ad.currency_from}</span>
-          <span className="arrow">→</span>
-          <span className="currency-to">{ad.currency_to}</span>
-        </div>
-
-        <div className="ad-details">
-          <div className="detail">
-            <label>Available:</label>
-            <span>{ad.amount_available} {ad.currency_from}</span>
-          </div>
-          <div className="detail">
-            <label>Limits:</label>
-            <span>{ad.min_amount} - {ad.max_amount} {ad.currency_from}</span>
-          </div>
-        </div>
-
-        <div className="payment-methods">
-          <label>Payment Methods:</label>
-          <div className="methods-list">
-            {ad.payment_methods.map((method, index) => (
-              <span key={index} className="payment-method">{method}</span>
-            ))}
-          </div>
-        </div>
-
-        <div className="seller-info">
-          <div className="seller-name">
-            <span className="seller-label">Seller:</span>
-            <span>{ad.seller_name}</span>
-            {ad.seller_kyc_status === 'verified' && (
-              <span className="kyc-badge">✅ KYC</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="ad-footer">
-        <button className="trade-btn">
-          Start Trade
-        </button>
-      </div>
+      {showOrderModal && selectedAd && (
+        <OrderModal 
+          ad={selectedAd}
+          onClose={() => {
+            setShowOrderModal(false);
+            setSelectedAd(null);
+          }}
+          onOrderCreated={handleOrderCreated}
+        />
+      )}
     </div>
   );
 };

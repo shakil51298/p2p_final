@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Marketplace from './Marketplace';
+import OrdersPage from './OrdersPage';
 
 const Dashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -8,6 +9,8 @@ const Dashboard = ({ user, onLogout }) => {
     switch (activeTab) {
       case 'marketplace':
         return <Marketplace user={user} />;
+      case 'orders': // Add this case
+        return <OrdersPage user={user} />;
       case 'dashboard':
       default:
         return (
@@ -80,7 +83,12 @@ const Dashboard = ({ user, onLogout }) => {
               Marketplace
             </button>
             <button className="nav-btn">My Ads</button>
-            <button className="nav-btn">Orders</button>
+            <button 
+              className={activeTab === 'orders' ? 'nav-btn active' : 'nav-btn'} // Add this
+              onClick={() => setActiveTab('orders')}
+            >
+              Orders
+            </button>
           </nav>
 
           <div className="user-info">
