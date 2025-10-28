@@ -1299,3 +1299,245 @@
   margin-top: 8px;
   border: 1px solid #e9ecef;
 }
+
+/* Enhanced File Upload Styles */
+.file-preview-section {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  margin: 1rem;
+  padding: 0;
+  overflow: hidden;
+}
+
+.file-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #e9ecef;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.file-preview-header h4 {
+  margin: 0;
+  color: #495057;
+}
+
+.cancel-file-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cancel-file-btn:hover {
+  color: #dc3545;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 50%;
+}
+
+.file-preview-content {
+  padding: 1.5rem;
+}
+
+.file-preview-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid #dee2e6;
+}
+
+.file-preview-generic {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  margin-bottom: 1rem;
+}
+
+.file-icon-large {
+  font-size: 3rem;
+}
+
+.file-caption-input {
+  margin: 1rem 0;
+}
+
+.file-caption-input input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.file-caption-input input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.file-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.send-file-btn {
+  padding: 10px 20px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.send-file-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.send-file-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Crop Modal Styles */
+.crop-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.crop-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 600px;
+  overflow: hidden;
+}
+
+.crop-modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.crop-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  background: white;
+}
+
+.crop-modal-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.crop-area {
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  max-height: 400px;
+  overflow: auto;
+}
+
+.crop-area img {
+  max-width: 100%;
+  max-height: 300px;
+}
+
+.crop-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: white;
+}
+
+.confirm-btn {
+  padding: 10px 20px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirm-btn:hover {
+  background: #5a6fd8;
+}
+
+/* Enhanced File Message Styles */
+.file-caption {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+  font-style: italic;
+  color: #495057;
+}
+
+.image-preview-container {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.image-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  transition: filter 0.3s ease;
+}
+
+.image-preview.blurred {
+  filter: blur(20px);
+}
+
+/* File message improvements */
+.file-message {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Input improvements when file is selected */
+.chat-input-form:has(+ .file-preview-section) .input-group input {
+  opacity: 0.6;
+  background: #f8f9fa;
+}

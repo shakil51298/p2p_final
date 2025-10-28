@@ -1,6 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
+import ReactCrop from 'react-image-crop';
+import Modal from 'react-modal';
+import 'react-image-crop/dist/ReactCrop.css';
+
+// Set app element for accessibility
+Modal.setAppElement('#root');
 
 const ChatModal = ({ order, user, onClose }) => {
   const [messages, setMessages] = useState([]);
@@ -10,6 +16,16 @@ const ChatModal = ({ order, user, onClose }) => {
   const [typingUsers, setTypingUsers] = useState([]);
   const [connectionError, setConnectionError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [crop, setCrop] = useState({ unit: '%', width: 100, height: 100 });
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const [imageRef, setImageRef] = useState(null);
+  const [fileCaption, setFileCaption] = useState('');
+  const [blurIntensity, setBlurIntensity] = useState(20);
+
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -90,11 +106,21 @@ const ChatModal = ({ order, user, onClose }) => {
       const response = await axios.get(`http://localhost:50000/api/chat/messages/${order.id}`);
       console.log('📨 Loaded messages:', response.data);
       
-      // Parse file_data from JSON string
-      const messagesWithFiles = response.data.map(message => ({
-        ...message,
-        file_data: message.file_data ? JSON.parse(message.file_data) : null
-      }));
+      // Parse file_data from JSON string with error handling
+      const messagesWithFiles = response.data.map(message => {
+        try {
+          return {
+            ...message,
+            file_data: message.file_data ? JSON.parse(message.file_data) : null
+          };
+        } catch (error) {
+          console.error('🔴 Error parsing file_data for message:', message.id, error);
+          return {
+            ...message,
+            file_data: null
+          };
+        }
+      });
       
       setMessages(messagesWithFiles);
     } catch (error) {
@@ -108,15 +134,123 @@ const ChatModal = ({ order, user, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleFileUpload = async (file) => {
-    if (!file) return;
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFilePreview(e.target.result);
+        setCropModalOpen(true);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset file input
+    e.target.value = '';
+  };
+
+  const getCroppedImg = (image, crop, fileName) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    const pixelRatio = window.devicePixelRatio;
+
+    canvas.width = crop.width * pixelRatio * scaleX;
+    canvas.height = crop.height * pixelRatio * scaleY;
+
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    ctx.imageSmoothingQuality = 'high';
+
+    ctx.drawImage(
+      image,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width * scaleX,
+      crop.height * scaleY
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            console.error('Canvas is empty');
+            return;
+          }
+          blob.name = fileName;
+          resolve(blob);
+        },
+        selectedFile.type,
+        1
+      );
+    });
+  };
+
+  const handleCropComplete = async () => {
+    if (imageRef && completedCrop && selectedFile && selectedFile.type.startsWith('image/')) {
+      try {
+        const croppedImageBlob = await getCroppedImg(
+          imageRef,
+          completedCrop,
+          selectedFile.name
+        );
+        const croppedFile = new File([croppedImageBlob], selectedFile.name, { type: selectedFile.type });
+        setSelectedFile(croppedFile);
+        
+        // Create new preview from cropped image
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setFilePreview(e.target.result);
+        };
+        reader.readAsDataURL(croppedFile);
+      } catch (error) {
+        console.error('Error cropping image:', error);
+      }
+    }
+    setCropModalOpen(false);
+  };
+
+  const applyBlurEffect = () => {
+    if (!filePreview) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Apply blur
+      ctx.filter = `blur(${blurIntensity}px)`;
+      ctx.drawImage(img, 0, 0);
+      
+      // Convert back to file
+      canvas.toBlob((blob) => {
+        const blurredFile = new File([blob], `blurred-${selectedFile.name}`, { type: selectedFile.type });
+        setSelectedFile(blurredFile);
+        setFilePreview(canvas.toDataURL());
+      }, selectedFile.type);
+    };
+    
+    img.src = filePreview;
+  };
+
+  const handleSendFile = async () => {
+    if (!selectedFile || !socket) return;
 
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', selectedFile);
 
-      console.log('📤 Uploading file:', file.name);
+      console.log('📤 Uploading file:', selectedFile.name);
       
       const uploadResponse = await axios.post('http://localhost:50000/api/upload', formData, {
         headers: {
@@ -132,13 +266,19 @@ const ChatModal = ({ order, user, onClose }) => {
           orderId: order.id,
           senderId: user.id,
           senderName: user.name,
-          message: file.name,
+          message: fileCaption || selectedFile.name,
           messageType: 'file',
           file: uploadResponse.data.file
         };
 
         console.log('📤 Sending file message:', messageData);
         socket.emit('send_message', messageData);
+        
+        // Reset file state
+        setSelectedFile(null);
+        setFilePreview(null);
+        setFileCaption('');
+        setEditModalOpen(false);
       }
 
     } catch (error) {
@@ -149,13 +289,12 @@ const ChatModal = ({ order, user, onClose }) => {
     }
   };
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      handleFileUpload(file);
-    }
-    // Reset file input
-    e.target.value = '';
+  const cancelFileSend = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    setFileCaption('');
+    setCropModalOpen(false);
+    setEditModalOpen(false);
   };
 
   const sendMessage = (e) => {
@@ -223,6 +362,7 @@ const ChatModal = ({ order, user, onClose }) => {
   };
 
   const getFileIcon = (mimetype) => {
+    if (!mimetype) return '📎';
     if (mimetype.startsWith('image/')) return '🖼️';
     if (mimetype === 'application/pdf') return '📄';
     if (mimetype.includes('word') || mimetype.includes('document')) return '📝';
@@ -231,11 +371,36 @@ const ChatModal = ({ order, user, onClose }) => {
   };
 
   const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
+    if (!bytes) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Safe function to check if message has file data
+  const hasFileData = (message) => {
+    return message && message.message_type === 'file' && message.file_data;
+  };
+
+  // Safe function to get file mimetype
+  const getFileMimetype = (message) => {
+    return hasFileData(message) ? message.file_data.mimetype : null;
+  };
+
+  // Safe function to get file original name
+  const getFileName = (message) => {
+    return hasFileData(message) ? message.file_data.originalname : '';
+  };
+
+  // Safe function to get file size
+  const getFileSize = (message) => {
+    return hasFileData(message) ? message.file_data.size : 0;
+  };
+
+  // Safe function to get file path
+  const getFilePath = (message) => {
+    return hasFileData(message) ? message.file_data.path : '';
   };
 
   if (loading) {
@@ -293,25 +458,56 @@ const ChatModal = ({ order, user, onClose }) => {
                 className={`message ${isMyMessage(message) ? 'my-message' : 'other-message'}`}
               >
                 <div className="message-content">
-                  {message.message_type === 'file' && message.file_data ? (
+                  {hasFileData(message) ? (
                     <div className="file-message">
                       <div className="file-info">
                         <span className="file-icon">
-                          {getFileIcon(message.file_data.mimetype)}
+                          {getFileIcon(getFileMimetype(message))}
                         </span>
                         <div className="file-details">
-                          <div className="file-name">{message.file_data.originalname}</div>
-                          <div className="file-size">{formatFileSize(message.file_data.size)}</div>
+                          <div className="file-name">{getFileName(message)}</div>
+                          <div className="file-size">{formatFileSize(getFileSize(message))}</div>
+                          {message.message && message.message !== getFileName(message) && (
+                            <div className="file-caption">{message.message}</div>
+                          )}
                         </div>
                       </div>
-                      <a 
-                        href={`http://localhost:50000${message.file_data.path}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="download-btn"
-                      >
-                        Download
-                      </a>
+                      {getFileMimetype(message) && getFileMimetype(message).startsWith('image/') ? (
+                        <div className="image-preview-container">
+                          <img 
+                            src={`http://localhost:50000${getFilePath(message)}`}
+                            alt={getFileName(message)}
+                            className="image-preview blurred"
+                            onLoad={(e) => {
+                              // Remove blur after image loads
+                              setTimeout(() => {
+                                e.target.classList.remove('blurred');
+                              }, 1000);
+                            }}
+                            onError={(e) => {
+                              console.error('🔴 Error loading image:', getFilePath(message));
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                          <a 
+                            href={`http://localhost:50000${getFilePath(message)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="download-btn"
+                          >
+                            View Original
+                          </a>
+                        </div>
+                      ) : (
+                        <a 
+                          href={`http://localhost:50000${getFilePath(message)}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="download-btn"
+                        >
+                          Download
+                        </a>
+                      )}
                     </div>
                   ) : (
                     <div className="message-text">{message.message}</div>
@@ -340,6 +536,61 @@ const ChatModal = ({ order, user, onClose }) => {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* File Preview Section */}
+        {selectedFile && !cropModalOpen && !editModalOpen && (
+          <div className="file-preview-section">
+            <div className="file-preview-header">
+              <h4>📎 File Preview</h4>
+              <button className="cancel-file-btn" onClick={cancelFileSend}>×</button>
+            </div>
+            <div className="file-preview-content">
+              {selectedFile.type.startsWith('image/') ? (
+                <img src={filePreview} alt="Preview" className="file-preview-image" />
+              ) : (
+                <div className="file-preview-generic">
+                  <span className="file-icon-large">{getFileIcon(selectedFile.type)}</span>
+                  <div className="file-details">
+                    <div className="file-name">{selectedFile.name}</div>
+                    <div className="file-size">{formatFileSize(selectedFile.size)}</div>
+                  </div>
+                </div>
+              )}
+              <div className="file-caption-input">
+                <input
+                  type="text"
+                  value={fileCaption}
+                  onChange={(e) => setFileCaption(e.target.value)}
+                  placeholder="Add a caption (optional)"
+                  maxLength="200"
+                />
+              </div>
+              <div className="file-actions">
+                <button 
+                  className="edit-btn"
+                  onClick={() => setEditModalOpen(true)}
+                  disabled={!selectedFile.type.startsWith('image/')}
+                >
+                  🎨 Edit
+                </button>
+                <button 
+                  className="cancel-btn" 
+                  onClick={cancelFileSend}
+                  disabled={uploading}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="send-file-btn" 
+                  onClick={handleSendFile}
+                  disabled={uploading}
+                >
+                  {uploading ? '📤 Sending...' : '📤 Send File'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={sendMessage} className="chat-input-form">
           <div className="input-group">
             <input
@@ -350,14 +601,17 @@ const ChatModal = ({ order, user, onClose }) => {
               style={{ display: 'none' }}
             />
             
-            <button 
-              type="button" 
-              className="file-btn"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading || !socket?.connected}
-            >
-              {uploading ? '📤 Uploading...' : '📎'}
-            </button>
+            <div className="file-buttons">
+              <button 
+                type="button" 
+                className="file-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || !socket?.connected || selectedFile}
+                title="Upload File"
+              >
+                📎
+              </button>
+            </div>
             
             <input
               type="text"
@@ -366,14 +620,14 @@ const ChatModal = ({ order, user, onClose }) => {
                 setNewMessage(e.target.value);
                 handleTyping();
               }}
-              placeholder="Type your message or attach file..."
+              placeholder="Type your message..."
               maxLength="500"
-              disabled={!socket?.connected}
+              disabled={!socket?.connected || selectedFile}
             />
             
             <button 
               type="submit" 
-              disabled={!newMessage.trim() || !socket?.connected}
+              disabled={!newMessage.trim() || !socket?.connected || selectedFile}
             >
               {socket?.connected ? 'Send' : 'Connecting...'}
             </button>
@@ -383,6 +637,111 @@ const ChatModal = ({ order, user, onClose }) => {
             <small>Supported: Images (JPG, PNG, GIF), PDF, DOC, DOCX, TXT (Max 10MB)</small>
           </div>
         </form>
+
+        {/* Crop Modal */}
+        <Modal
+          isOpen={cropModalOpen}
+          onRequestClose={cancelFileSend}
+          className="crop-modal"
+          overlayClassName="crop-modal-overlay"
+        >
+          <div className="crop-modal-content">
+            <div className="crop-modal-header">
+              <h3>✂️ Crop Image</h3>
+              <button className="close-btn" onClick={cancelFileSend}>×</button>
+            </div>
+            <div className="crop-area">
+              {selectedFile?.type.startsWith('image/') ? (
+                <ReactCrop
+                  crop={crop}
+                  onChange={(newCrop) => setCrop(newCrop)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={1}
+                >
+                  <img
+                    ref={setImageRef}
+                    src={filePreview}
+                    alt="Crop preview"
+                    onLoad={(e) => {
+                      const { width, height } = e.currentTarget;
+                      setCrop({
+                        unit: '%',
+                        width: 90,
+                        height: (90 * height) / width,
+                      });
+                    }}
+                  />
+                </ReactCrop>
+              ) : (
+                <div className="file-preview-generic">
+                  <span className="file-icon-large">{getFileIcon(selectedFile?.type)}</span>
+                  <div className="file-details">
+                    <div className="file-name">{selectedFile?.name}</div>
+                    <div className="file-size">{formatFileSize(selectedFile?.size)}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="crop-actions">
+              <button className="cancel-btn" onClick={cancelFileSend}>
+                Cancel
+              </button>
+              <button className="confirm-btn" onClick={handleCropComplete}>
+                {selectedFile?.type.startsWith('image/') ? 'Apply Crop' : 'Continue'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Simple Edit Modal */}
+        <Modal
+          isOpen={editModalOpen}
+          onRequestClose={cancelFileSend}
+          className="edit-modal"
+          overlayClassName="edit-modal-overlay"
+        >
+          <div className="edit-modal-content">
+            <div className="edit-modal-header">
+              <h3>🎨 Edit Image</h3>
+              <button className="close-btn" onClick={cancelFileSend}>×</button>
+            </div>
+            
+            <div className="edit-tools">
+              <div className="tool-section">
+                <h4>Effects</h4>
+                <div className="effect-buttons">
+                  <button className="effect-btn" onClick={applyBlurEffect}>
+                    🔍 Apply Blur
+                  </button>
+                  <label>
+                    Blur Intensity:
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="50" 
+                      value={blurIntensity} 
+                      onChange={(e) => setBlurIntensity(parseInt(e.target.value))}
+                    />
+                    <span>{blurIntensity}px</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="edit-preview-container">
+              <img src={filePreview} alt="Edit preview" className="edit-preview-image" />
+            </div>
+
+            <div className="edit-actions">
+              <button className="cancel-btn" onClick={cancelFileSend}>
+                Cancel
+              </button>
+              <button className="save-btn" onClick={() => setEditModalOpen(false)}>
+                💾 Done Editing
+              </button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );
