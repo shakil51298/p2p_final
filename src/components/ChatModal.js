@@ -9,12 +9,14 @@ const ChatModal = ({ order, user, onClose }) => {
   const [socket, setSocket] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
   const [connectionError, setConnectionError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     // Initialize socket connection
     const newSocket = io('http://localhost:50000', {
-      transports: ['websocket', 'polling'] // Enable both transports
+      transports: ['websocket', 'polling']
     });
 
     newSocket.on('connect', () => {
@@ -87,7 +89,14 @@ const ChatModal = ({ order, user, onClose }) => {
       console.log('🟡 Loading messages for order:', order.id);
       const response = await axios.get(`http://localhost:50000/api/chat/messages/${order.id}`);
       console.log('📨 Loaded messages:', response.data);
-      setMessages(response.data);
+      
+      // Parse file_data from JSON string
+      const messagesWithFiles = response.data.map(message => ({
+        ...message,
+        file_data: message.file_data ? JSON.parse(message.file_data) : null
+      }));
+      
+      setMessages(messagesWithFiles);
     } catch (error) {
       console.error('🔴 Error loading messages:', error);
     } finally {
@@ -97,6 +106,56 @@ const ChatModal = ({ order, user, onClose }) => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      console.log('📤 Uploading file:', file.name);
+      
+      const uploadResponse = await axios.post('http://localhost:50000/api/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      console.log('🟢 File uploaded:', uploadResponse.data);
+
+      // Send file message via socket
+      if (socket && socket.connected) {
+        const messageData = {
+          orderId: order.id,
+          senderId: user.id,
+          senderName: user.name,
+          message: file.name,
+          messageType: 'file',
+          file: uploadResponse.data.file
+        };
+
+        console.log('📤 Sending file message:', messageData);
+        socket.emit('send_message', messageData);
+      }
+
+    } catch (error) {
+      console.error('🔴 File upload error:', error);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+    // Reset file input
+    e.target.value = '';
   };
 
   const sendMessage = (e) => {
@@ -163,6 +222,22 @@ const ChatModal = ({ order, user, onClose }) => {
     }
   };
 
+  const getFileIcon = (mimetype) => {
+    if (mimetype.startsWith('image/')) return '🖼️';
+    if (mimetype === 'application/pdf') return '📄';
+    if (mimetype.includes('word') || mimetype.includes('document')) return '📝';
+    if (mimetype === 'text/plain') return '📃';
+    return '📎';
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   if (loading) {
     return (
       <div className="modal-overlay">
@@ -218,7 +293,29 @@ const ChatModal = ({ order, user, onClose }) => {
                 className={`message ${isMyMessage(message) ? 'my-message' : 'other-message'}`}
               >
                 <div className="message-content">
-                  <div className="message-text">{message.message}</div>
+                  {message.message_type === 'file' && message.file_data ? (
+                    <div className="file-message">
+                      <div className="file-info">
+                        <span className="file-icon">
+                          {getFileIcon(message.file_data.mimetype)}
+                        </span>
+                        <div className="file-details">
+                          <div className="file-name">{message.file_data.originalname}</div>
+                          <div className="file-size">{formatFileSize(message.file_data.size)}</div>
+                        </div>
+                      </div>
+                      <a 
+                        href={`http://localhost:50000${message.file_data.path}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="download-btn"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="message-text">{message.message}</div>
+                  )}
                   <div className="message-time">
                     {formatTime(message.created_at)}
                     {!isMyMessage(message) && (
@@ -246,22 +343,44 @@ const ChatModal = ({ order, user, onClose }) => {
         <form onSubmit={sendMessage} className="chat-input-form">
           <div className="input-group">
             <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt"
+              style={{ display: 'none' }}
+            />
+            
+            <button 
+              type="button" 
+              className="file-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || !socket?.connected}
+            >
+              {uploading ? '📤 Uploading...' : '📎'}
+            </button>
+            
+            <input
               type="text"
               value={newMessage}
               onChange={(e) => {
                 setNewMessage(e.target.value);
                 handleTyping();
               }}
-              placeholder="Type your message..."
+              placeholder="Type your message or attach file..."
               maxLength="500"
               disabled={!socket?.connected}
             />
+            
             <button 
               type="submit" 
               disabled={!newMessage.trim() || !socket?.connected}
             >
               {socket?.connected ? 'Send' : 'Connecting...'}
             </button>
+          </div>
+          
+          <div className="file-types-info">
+            <small>Supported: Images (JPG, PNG, GIF), PDF, DOC, DOCX, TXT (Max 10MB)</small>
           </div>
         </form>
       </div>
