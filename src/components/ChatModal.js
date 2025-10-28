@@ -8,28 +8,52 @@ const ChatModal = ({ order, user, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [connectionError, setConnectionError] = useState('');
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     // Initialize socket connection
-    const newSocket = io('http://localhost:50000');
+    const newSocket = io('http://localhost:50000', {
+      transports: ['websocket', 'polling'] // Enable both transports
+    });
+
+    newSocket.on('connect', () => {
+      console.log('🔵 Socket connected:', newSocket.id);
+      setConnectionError('');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('🔴 Socket connection error:', error);
+      setConnectionError('Failed to connect to chat server');
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('🔴 Socket disconnected:', reason);
+    });
+
     setSocket(newSocket);
 
     // Load chat messages
     loadMessages();
 
-    // Join order room
-    newSocket.emit('join_order', order.id);
+    // Join order room after connection is established
+    if (newSocket.connected) {
+      joinOrderRoom(newSocket);
+    } else {
+      newSocket.on('connect', () => {
+        joinOrderRoom(newSocket);
+      });
+    }
 
     // Listen for new messages
-     // Listen for new messages
-     newSocket.on('receive_message', (message) => {
+    newSocket.on('receive_message', (message) => {
       console.log('💬 New message received:', message);
       setMessages(prev => [...prev, message]);
     });
 
     // Listen for typing indicators
     newSocket.on('user_typing', (data) => {
+      console.log('⌨️ User typing:', data);
       setTypingUsers(prev => {
         if (!prev.find(user => user.userId === data.userId)) {
           return [...prev, data];
@@ -39,13 +63,20 @@ const ChatModal = ({ order, user, onClose }) => {
     });
 
     newSocket.on('user_stop_typing', (data) => {
+      console.log('⌨️ User stopped typing:', data);
       setTypingUsers(prev => prev.filter(user => user.userId !== data.userId));
     });
 
     return () => {
+      console.log('🔴 Cleaning up socket connection');
       newSocket.disconnect();
     };
   }, [order.id]);
+
+  const joinOrderRoom = (socket) => {
+    console.log('🟡 Joining order room:', order.id);
+    socket.emit('join_order', order.id);
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -53,11 +84,12 @@ const ChatModal = ({ order, user, onClose }) => {
 
   const loadMessages = async () => {
     try {
+      console.log('🟡 Loading messages for order:', order.id);
       const response = await axios.get(`http://localhost:50000/api/chat/messages/${order.id}`);
       console.log('📨 Loaded messages:', response.data);
       setMessages(response.data);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      console.error('🔴 Error loading messages:', error);
     } finally {
       setLoading(false);
     }
@@ -69,7 +101,15 @@ const ChatModal = ({ order, user, onClose }) => {
 
   const sendMessage = (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socket) return;
+    if (!newMessage.trim() || !socket) {
+      console.log('🔴 Cannot send message - no socket or empty message');
+      return;
+    }
+
+    if (!socket.connected) {
+      setConnectionError('Not connected to chat server. Please try again.');
+      return;
+    }
 
     const messageData = {
       orderId: order.id,
@@ -79,12 +119,13 @@ const ChatModal = ({ order, user, onClose }) => {
       messageType: 'text'
     };
 
+    console.log('📤 Sending message:', messageData);
     socket.emit('send_message', messageData);
     setNewMessage('');
   };
 
   const handleTyping = () => {
-    if (socket) {
+    if (socket && socket.connected) {
       socket.emit('typing', {
         orderId: order.id,
         userId: user.id,
@@ -93,10 +134,12 @@ const ChatModal = ({ order, user, onClose }) => {
 
       // Stop typing after 1 second
       setTimeout(() => {
-        socket.emit('stop_typing', {
-          orderId: order.id,
-          userId: user.id
-        });
+        if (socket && socket.connected) {
+          socket.emit('stop_typing', {
+            orderId: order.id,
+            userId: user.id
+          });
+        }
       }, 1000);
     }
   };
@@ -113,9 +156,11 @@ const ChatModal = ({ order, user, onClose }) => {
   };
 
   const getOtherPartyName = () => {
-    // For demo, we'll assume user is always buyer
-    // In real app, you'd check if user is buyer or seller
-    return order.seller_name;
+    if (user.id === order.buyer_id) {
+      return order.seller_name;
+    } else {
+      return order.buyer_name;
+    }
   };
 
   if (loading) {
@@ -133,13 +178,22 @@ const ChatModal = ({ order, user, onClose }) => {
       <div className="modal-content chat-modal">
         <div className="chat-header">
           <div className="chat-title">
-            <h3>💬 Trade Chat</h3>
+            <h3>💬 Trade Chat - Order #{order.id}</h3>
             <div className="order-info">
-              Order #{order.id} • {getOtherPartyName()}
+              Chatting with: {getOtherPartyName()}
+            </div>
+            <div className="debug-info">
+              <small>Your ID: {user.id} | Order ID: {order.id} | Socket: {socket?.connected ? '🟢 Connected' : '🔴 Disconnected'}</small>
             </div>
           </div>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
+
+        {connectionError && (
+          <div className="error-message">
+            {connectionError}
+          </div>
+        )}
 
         <div className="chat-order-details">
           <div className="trade-summary">
@@ -200,9 +254,13 @@ const ChatModal = ({ order, user, onClose }) => {
               }}
               placeholder="Type your message..."
               maxLength="500"
+              disabled={!socket?.connected}
             />
-            <button type="submit" disabled={!newMessage.trim()}>
-              Send
+            <button 
+              type="submit" 
+              disabled={!newMessage.trim() || !socket?.connected}
+            >
+              {socket?.connected ? 'Send' : 'Connecting...'}
             </button>
           </div>
         </form>

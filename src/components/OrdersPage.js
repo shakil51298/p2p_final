@@ -14,11 +14,12 @@ const OrdersPage = ({ user }) => {
 
   const fetchOrders = async () => {
     try {
+      console.log('🟡 Fetching orders for user:', user.id);
       const response = await axios.get(`http://localhost:50000/api/orders/my-orders?user_id=${user.id}`);
-      console.log('📦 Orders loaded for user:', user.id, response.data);
+      console.log('📦 Orders loaded:', response.data);
       setOrders(response.data);
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('🔴 Error fetching orders:', error);
     } finally {
       setLoading(false);
     }
@@ -39,6 +40,14 @@ const OrdersPage = ({ user }) => {
     return new Date(dateString).toLocaleString();
   };
 
+  const handleViewChat = (order) => {
+    console.log('🟡 Opening chat for order:', order.id);
+    console.log('🟡 Current user:', user);
+    console.log('🟡 Order details:', order);
+    setSelectedOrder(order);
+    setShowChatModal(true);
+  };
+
   if (loading) {
     return <div className="loading">Loading orders...</div>;
   }
@@ -49,8 +58,6 @@ const OrdersPage = ({ user }) => {
         <h1>📦 My Orders</h1>
         <p>Manage your trade orders and track their status</p>
       </div>
-
-      
 
       {orders.length === 0 ? (
         <div className="no-orders">
@@ -110,10 +117,13 @@ const OrdersPage = ({ user }) => {
 
                 <div className="order-parties">
                   <div className="party">
-                    <strong>Buyer:</strong> {order.buyer_name}
+                    <strong>Buyer:</strong> {order.buyer_name} (ID: {order.buyer_id})
                   </div>
                   <div className="party">
-                    <strong>Seller:</strong> {order.seller_name}
+                    <strong>Seller:</strong> {order.seller_name} (ID: {order.seller_id})
+                  </div>
+                  <div className="party">
+                    <strong>Your Role:</strong> {user.id === order.buyer_id ? 'Buyer' : 'Seller'}
                   </div>
                 </div>
               </div>
@@ -129,29 +139,29 @@ const OrdersPage = ({ user }) => {
                   <button className="action-btn success">Release Funds</button>
                 )}
                 <button 
-  className="action-btn info"
-  onClick={() => {
-    setSelectedOrder(order);
-    setShowChatModal(true);
-  }}
->
-  View Chat
-</button>
+                  className="action-btn info"
+                  onClick={() => handleViewChat(order)}
+                >
+                  💬 View Chat
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Chat Modal */}
       {showChatModal && selectedOrder && (
-  <ChatModal 
-    order={selectedOrder}
-    user={user}
-    onClose={() => {
-      setShowChatModal(false);
-      setSelectedOrder(null);
-    }}
-  />
-)}
+        <ChatModal 
+          order={selectedOrder}
+          user={user}
+          onClose={() => {
+            console.log('🔴 Closing chat modal');
+            setShowChatModal(false);
+            setSelectedOrder(null);
+          }}
+        />
+      )}
     </div>
   );
 };
