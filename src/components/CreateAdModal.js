@@ -32,12 +32,22 @@ const CreateAdModal = ({ onClose, onAdCreated, user }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+  
     try {
-      await axios.post('http://localhost:50000/api/ads/create', formData);
+      const adData = {
+        ...formData,
+        user_id: user.id // Send the actual logged-in user ID
+      };
+  
+      console.log('📤 Creating ad for user:', user.id, adData);
+  
+      const response = await axios.post('http://localhost:50000/api/ads/create', adData);
+      console.log('🟢 Ad created:', response.data);
       onAdCreated();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error creating ad');
+      const errorMessage = err.response?.data?.message || 'Error creating ad';
+      setError(errorMessage);
+      console.error('Ad creation error:', err.response?.data);
     } finally {
       setLoading(false);
     }
@@ -50,9 +60,6 @@ const CreateAdModal = ({ onClose, onAdCreated, user }) => {
           <h2>Create New Trading Ad</h2>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
-
-      
-
         <form onSubmit={handleSubmit} className="ad-form">
           {error && <div className="error-message">{error}</div>}
 

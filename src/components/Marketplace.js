@@ -10,6 +10,7 @@ const Marketplace = ({ user }) => {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedAd, setSelectedAd] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchAds();
@@ -17,10 +18,14 @@ const Marketplace = ({ user }) => {
 
   const fetchAds = async () => {
     try {
+      setLoading(true);
       const response = await axios.get('http://localhost:50000/api/ads/marketplace');
+      console.log("market place loaded ads");
       setAds(response.data);
     } catch (error) {
       console.error('Error fetching ads:', error);
+      setError('Failed to load marketplace ads. Please try again.');
+      setAds([]);
     } finally {
       setLoading(false);
     }
@@ -183,16 +188,17 @@ const Marketplace = ({ user }) => {
         />
       )}
 
-      {showOrderModal && selectedAd && (
-        <OrderModal 
-          ad={selectedAd}
-          onClose={() => {
-            setShowOrderModal(false);
-            setSelectedAd(null);
-          }}
-          onOrderCreated={handleOrderCreated}
-        />
-      )}
+{showOrderModal && selectedAd && (
+  <OrderModal 
+    ad={selectedAd}
+    user={user} // Make sure this line exists
+    onClose={() => {
+      setShowOrderModal(false);
+      setSelectedAd(null);
+    }}
+    onOrderCreated={handleOrderCreated}
+  />
+)}
     </div>
   );
 };

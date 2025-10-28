@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import ChatModal from './ChatModal';
 
 const OrdersPage = ({ user }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -11,7 +14,8 @@ const OrdersPage = ({ user }) => {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/orders/my-orders');
+      const response = await axios.get(`http://localhost:50000/api/orders/my-orders?user_id=${user.id}`);
+      console.log('📦 Orders loaded for user:', user.id, response.data);
       setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -45,6 +49,8 @@ const OrdersPage = ({ user }) => {
         <h1>📦 My Orders</h1>
         <p>Manage your trade orders and track their status</p>
       </div>
+
+      
 
       {orders.length === 0 ? (
         <div className="no-orders">
@@ -122,12 +128,30 @@ const OrdersPage = ({ user }) => {
                 {order.status === 'paid' && (
                   <button className="action-btn success">Release Funds</button>
                 )}
-                <button className="action-btn info">View Chat</button>
+                <button 
+  className="action-btn info"
+  onClick={() => {
+    setSelectedOrder(order);
+    setShowChatModal(true);
+  }}
+>
+  View Chat
+</button>
               </div>
             </div>
           ))}
         </div>
       )}
+      {showChatModal && selectedOrder && (
+  <ChatModal 
+    order={selectedOrder}
+    user={user}
+    onClose={() => {
+      setShowChatModal(false);
+      setSelectedOrder(null);
+    }}
+  />
+)}
     </div>
   );
 };

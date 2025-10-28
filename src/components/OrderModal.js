@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const OrderModal = ({ ad, onClose, onOrderCreated }) => {
+const OrderModal = ({ ad, user, onClose, onOrderCreated }) => { // Add user here
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Add debug to check if user is available
+  console.log('🔴 OrderModal - User prop:', user);
 
   const calculateTotal = () => {
     if (!amount || !ad) return 0;
@@ -15,37 +18,33 @@ const OrderModal = ({ ad, onClose, onOrderCreated }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+  
     console.log('🔴 OrderModal: Submit started');
-    console.log('🔴 Order data:', {
-      ad_id: ad.id,
-      amount: parseFloat(amount),
-      ad: ad
-    });
+    console.log('🔴 User:', user); // Check if user object has id
 
+    // Check if user is available
+    if (!user || !user.id) {
+      setError('User not found. Please log in again.');
+      setLoading(false);
+      return;
+    }
+  
     try {
       const orderData = {
         ad_id: ad.id,
-        amount: parseFloat(amount)
+        amount: parseFloat(amount),
+        buyer_id: user.id // Send the actual logged-in user ID
       };
-
-      console.log('🔴 Sending POST to:', 'http://localhost:50000/api/orders/create');
-      console.log('🔴 Request data:', orderData);
-
-      const response = await axios.post('http://localhost:50000/api/orders/create', orderData);
-
+  
+      console.log('🔴 Sending order data:', orderData);
+  
+      const response = await axios.post('http://localhost:50000/api/orders/create', orderData); // Fixed port to 5000
       console.log('🟢 Order created successfully:', response.data);
       onOrderCreated(response.data.order);
       
     } catch (err) {
       console.error('🔴 Order creation error:', err);
-      console.error('🔴 Error response:', err.response);
-      
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          err.message || 
-                          'Error creating order';
-      
+      const errorMessage = err.response?.data?.message || 'Error creating order';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -99,7 +98,7 @@ const OrderModal = ({ ad, onClose, onOrderCreated }) => {
             />
             <div className="amount-limits">
               Min: {ad.min_amount} {ad.currency_from} | 
-              Max: {ad.max_amount} {ad.currency_from}
+              Max: {ad.amount_available} {ad.currency_from} {/* Fixed: should be amount_available, not max_amount */}
             </div>
           </div>
 
