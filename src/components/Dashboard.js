@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Marketplace from './Marketplace';
 import OrdersPage from './OrdersPage';
+import MyAds from './MyAds/MyAds';
 
 const Dashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -9,6 +10,25 @@ const Dashboard = ({ user, onLogout }) => {
     switch (activeTab) {
       case 'marketplace':
         return <Marketplace user={user} />;
+        case 'myads':
+          case 'myads':
+            case 'myads':
+              return (
+                <MyAds 
+                  user={user} 
+                  onCreateAd={() => setActiveTab('marketplace')} // Navigate to marketplace to create ad
+                  onEditAd={(adId) => {
+                    // Handle edit ad - you can implement this later
+                    console.log('Edit ad:', adId);
+                    alert('Edit ad functionality coming soon!');
+                  }}
+                  onViewAd={(adId) => {
+                    // Handle view ad details
+                    console.log('View ad:', adId);
+                    alert('View ad details functionality coming soon!');
+                  }}
+                />
+              );
       case 'orders': // Add this case
         return <OrdersPage user={user} />;
       case 'dashboard':
@@ -82,7 +102,12 @@ const Dashboard = ({ user, onLogout }) => {
             >
               Marketplace
             </button>
-            <button className="nav-btn">My Ads</button>
+            <button 
+                className={activeTab === 'myads' ? 'nav-btn active' : 'nav-btn'}
+                onClick={() => setActiveTab('myads')}
+              >
+                My Ads
+              </button>
             <button 
               className={activeTab === 'orders' ? 'nav-btn active' : 'nav-btn'} // Add this
               onClick={() => setActiveTab('orders')}

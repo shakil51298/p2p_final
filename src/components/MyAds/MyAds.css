@@ -1,0 +1,406 @@
+.my-ads-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .my-ads-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+  
+  .my-ads-header h1 {
+    color: #333;
+    font-size: 2rem;
+    margin: 0;
+  }
+  
+  .create-ad-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .create-ad-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+  
+  /* Statistics Cards */
+  .stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    border-left: 4px solid #667eea;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+  }
+  
+  .stat-label {
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  /* Tabs */
+  .ads-tabs {
+    display: flex;
+    background: white;
+    border-radius: 12px;
+    padding: 5px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+  
+  .tab-btn.active {
+    background: #667eea;
+    color: white;
+  }
+  
+  .tab-btn:hover:not(.active) {
+    background: #f8f9fa;
+  }
+  
+  /* Ads List */
+  .ads-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .ad-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+  }
+  
+  .ad-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+  
+  .ad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  
+  .ad-title-section h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1.3rem;
+  }
+  
+  .ad-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  /* Status Badges */
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .status-active {
+    background: #d4edda;
+    color: #155724;
+  }
+  
+  .status-paused {
+    background: #fff3cd;
+    color: #856404;
+  }
+  
+  .status-completed {
+    background: #d1ecf1;
+    color: #0c5460;
+  }
+  
+  .status-expired {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  
+  /* Trade Type Badges */
+  .trade-type-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .trade-type-badge.buy {
+    background: #d4edda;
+    color: #155724;
+  }
+  
+  .trade-type-badge.sell {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  
+  .ad-date {
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  /* Action Buttons */
+  .ad-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .action-btn {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+  }
+  
+  .action-btn:hover {
+    transform: translateY(-1px);
+  }
+  
+  .action-btn.pause:hover {
+    background: #fff3cd;
+    border-color: #ffc107;
+  }
+  
+  .action-btn.activate:hover {
+    background: #d4edda;
+    border-color: #28a745;
+  }
+  
+  .action-btn.edit:hover {
+    background: #d1ecf1;
+    border-color: #17a2b8;
+  }
+  
+  .action-btn.delete:hover {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #dc3545;
+  }
+  
+  /* Ad Details */
+  .ad-details {
+    margin-bottom: 20px;
+  }
+  
+  .detail-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 15px;
+  }
+  
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .detail-item label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+  }
+  
+  .detail-value {
+    color: #333;
+    font-weight: 500;
+  }
+  
+  /* Ad Terms */
+  .ad-terms {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+  
+  .ad-terms label {
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+    display: block;
+  }
+  
+  .ad-terms p {
+    margin: 0;
+    color: #555;
+    line-height: 1.5;
+  }
+  
+  /* Ad Footer */
+  .ad-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+  }
+  
+  .ad-performance {
+    display: flex;
+    gap: 20px;
+  }
+  
+  .performance-item {
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  .view-details-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+  }
+  
+  .view-details-btn:hover {
+    background: #5a6fd8;
+    transform: translateY(-1px);
+  }
+  
+  /* No Ads State */
+  .no-ads {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .no-ads-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+  }
+  
+  .no-ads h3 {
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  .no-ads p {
+    color: #666;
+    margin-bottom: 30px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  /* Loading State */
+  .loading-spinner {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    font-size: 1.1rem;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .my-ads-header {
+      flex-direction: column;
+      gap: 15px;
+      text-align: center;
+    }
+  
+    .ad-header {
+      flex-direction: column;
+      gap: 15px;
+    }
+  
+    .ad-actions {
+      justify-content: center;
+    }
+  
+    .ad-footer {
+      flex-direction: column;
+      gap: 15px;
+      text-align: center;
+    }
+  
+    .ad-performance {
+      justify-content: center;
+    }
+  
+    .stats-cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  
+    .ads-tabs {
+      flex-wrap: wrap;
+    }
+  
+    .tab-btn {
+      flex: 1 0 45%;
+      margin: 5px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .stats-cards {
+      grid-template-columns: 1fr;
+    }
+  
+    .detail-row {
+      grid-template-columns: 1fr;
+    }
+  
+    .ad-performance {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
