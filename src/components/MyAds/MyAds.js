@@ -9,7 +9,7 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
   const [stats, setStats] = useState({
     totalAds: 0,
     activeAds: 0,
-    completedAds: 0,
+    pausedAds: 0,
     totalVolume: 0
   });
 
@@ -48,7 +48,7 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
       setStats({
         totalAds: 0,
         activeAds: 0,
-        completedAds: 0,
+        pausedAds: 0,
         totalVolume: 0
       });
       return;
@@ -56,13 +56,13 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
 
     const totalAds = ads.length;
     const activeAds = ads.filter(ad => ad.status === 'active').length;
-    const completedAds = ads.filter(ad => ad.status === 'completed').length;
+    const pausedAds = ads.filter(ad => ad.status === 'paused').length;
     const totalVolume = ads.reduce((sum, ad) => sum + parseFloat(ad.total_trades || 0), 0);
 
     setStats({
       totalAds,
       activeAds,
-      completedAds,
+      pausedAds,
       totalVolume
     });
   };
@@ -78,28 +78,28 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
 
   const handlePauseAd = async (adId) => {
     try {
-      await axios.patch(`http://localhost:50000/api/ads/${adId}`, {
-        status: 'paused'
-      });
+      const response = await axios.post(`http://localhost:50000/api/ads/${adId}/pause`);
+      console.log('✅ Ad paused:', response.data);
+      alert('Ad paused successfully!');
       fetchUserAds();
     } catch (error) {
-      console.error('Error pausing ad:', error);
-      alert('Failed to pause ad');
+      console.error('🔴 Error:', error.response?.data);
+      alert('Failed to pause ad.');
     }
   };
-
-  const handleActivateAd = async (adId) => {
+  
+  const handleResumeAd = async (adId) => {
     try {
-      await axios.patch(`http://localhost:50000/api/ads/${adId}`, {
-        status: 'active'
-      });
+      const response = await axios.post(`http://localhost:50000/api/ads/${adId}/resume`);
+      console.log('✅ Ad resumed:', response.data);
+      alert('Ad resumed successfully!');
       fetchUserAds();
     } catch (error) {
-      console.error('Error activating ad:', error);
-      alert('Failed to activate ad');
+      console.error('🔴 Error:', error.response?.data);
+      alert('Failed to resume ad.');
     }
   };
-
+  
   const handleDeleteAd = async (adId) => {
     if (window.confirm('Are you sure you want to delete this ad? This action cannot be undone.')) {
       try {
@@ -174,8 +174,8 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
           <div className="stat-label">Active Ads</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats.completedAds}</div>
-          <div className="stat-label">Completed</div>
+          <div className="stat-value">{stats.pausedAds}</div>
+          <div className="stat-label">Paused Ads</div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{stats.totalVolume}</div>
@@ -201,7 +201,7 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
           className={`tab-btn ${activeTab === 'paused' ? 'active' : ''}`}
           onClick={() => setActiveTab('paused')}
         >
-          Paused ({ads.filter(ad => ad.status === 'paused').length})
+          Paused ({stats.pausedAds})
         </button>
       </div>
 
@@ -234,35 +234,36 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
                   </div>
                 </div>
                 <div className="ad-actions">
-                  {ad.status === 'active' && (
+                  {/* Pause/Resume based on current status */}
+                  {ad.status === 'active' ? (
                     <button 
                       className="action-btn pause"
                       onClick={() => handlePauseAd(ad.id)}
-                      title="Pause Ad"
+                      title="Pause Ad - Hide from marketplace"
                     >
                       ⏸️ Pause
                     </button>
-                  )}
-                  {ad.status === 'paused' && (
+                  ) : ad.status === 'paused' ? (
                     <button 
-                      className="action-btn activate"
-                      onClick={() => handleActivateAd(ad.id)}
-                      title="Activate Ad"
+                      className="action-btn resume"
+                      onClick={() => handleResumeAd(ad.id)}
+                      title="Resume Ad - Show in marketplace"
                     >
-                      ▶️ Activate
+                      ▶️ Resume
                     </button>
-                  )}
+                  ) : null}
+                  
                   <button 
                     className="action-btn edit"
                     onClick={() => handleEditAd(ad.id)}
-                    title="Edit Ad"
+                    title="Edit Ad Details"
                   >
                     ✏️ Edit
                   </button>
                   <button 
                     className="action-btn delete"
                     onClick={() => handleDeleteAd(ad.id)}
-                    title="Delete Ad"
+                    title="Delete Ad Permanently"
                   >
                     🗑️ Delete
                   </button>
