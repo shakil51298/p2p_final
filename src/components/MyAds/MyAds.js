@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import EditAdModal from '../EditAdModal/EditAdModal';
 import './MyAds.css';
 
 const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [showEditModal, setShowEditModal] = useState(false); // Add this
+  const [selectedAd, setSelectedAd] = useState(null); // Add this
   const [stats, setStats] = useState({
     totalAds: 0,
     activeAds: 0,
@@ -67,14 +70,15 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
     });
   };
 
-  const handleEditAd = (adId) => {
-    if (onEditAd) {
-      onEditAd(adId);
-    } else {
-      console.log('Edit ad:', adId);
-      alert('Edit functionality will be implemented soon!');
-    }
+  const handleEditAd = (ad) => {
+    setSelectedAd(ad);
+    setShowEditModal(true);
   };
+
+    // Add this function for when ad is updated
+    const handleAdUpdated = () => {
+      fetchUserAds(); // Refresh the ads list
+    };
 
   const handlePauseAd = async (adId) => {
     try {
@@ -254,12 +258,12 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
                   ) : null}
                   
                   <button 
-                    className="action-btn edit"
-                    onClick={() => handleEditAd(ad.id)}
-                    title="Edit Ad Details"
-                  >
-                    ✏️ Edit
-                  </button>
+                      className="action-btn edit"
+                      onClick={() => handleEditAd(ad)} // Pass the entire ad object
+                      title="Edit Ad Details"
+                    >
+                      ✏️ Edit
+                    </button>
                   <button 
                     className="action-btn delete"
                     onClick={() => handleDeleteAd(ad.id)}
@@ -344,6 +348,17 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
           ))
         )}
       </div>
+      {showEditModal && selectedAd && (
+        <EditAdModal
+          ad={selectedAd}
+          user={user}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedAd(null);
+          }}
+          onAdUpdated={handleAdUpdated}
+        />
+      )}
     </div>
   );
 };
