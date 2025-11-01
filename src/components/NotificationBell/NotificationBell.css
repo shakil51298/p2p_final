@@ -258,3 +258,17 @@
 .notification-list::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+.notification-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-item:hover {
+  background-color: #e3f2fd !important;
+  transform: translateX(2px);
+}
+
+.notification-item:active {
+  transform: translateX(0);
+}

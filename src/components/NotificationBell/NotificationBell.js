@@ -4,18 +4,15 @@ import './NotificationBell.css';
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, addNotification } = useNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead, 
+    clearAll, 
+    handleNotificationClick // ← ADD THIS
+  } = useNotifications();
   const dropdownRef = useRef(null);
-
-   // Test notification sound
-   const testNotificationSound = () => {
-    addNotification({
-      type: 'test',
-      title: '🔊 Sound Test',
-      message: 'Testing notification sound system',
-      priority: 'low'
-    });
-  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -28,16 +25,6 @@ const NotificationBell = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Test function to simulate notifications (you can remove this later)
-  const testNotification = () => {
-    addNotification({
-      type: 'new_order',
-      title: '🎉 Test Notification',
-      message: 'This is a test notification from the system',
-      priority: 'medium'
-    });
-  };
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -99,23 +86,6 @@ const NotificationBell = () => {
         )}
       </button>
 
-      {/* Test button - remove in production */}
-      {<button 
-        onClick={testNotification}
-        style={{
-          marginLeft: '10px',
-          padding: '5px 10px',
-          fontSize: '12px',
-          background: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        Test Notify
-      </button> }
-
       {isOpen && (
         <div className="notification-dropdown">
           <div className="notification-header">
@@ -146,7 +116,12 @@ const NotificationBell = () => {
                 <div
                   key={notification.id}
                   className={`notification-item ${notification.read ? 'read' : 'unread'} ${getNotificationPriorityClass(notification.priority)}`}
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => {
+                    markAsRead(notification.id);
+                    handleNotificationClick(notification);
+                    setIsOpen(false); // Close dropdown after click
+                  }}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className="notification-icon">
                     {getNotificationIcon(notification.type)}
@@ -163,9 +138,9 @@ const NotificationBell = () => {
                       <span className="notification-time">
                         {formatTime(notification.timestamp)}
                       </span>
-                      {notification.data && notification.data.order_id && (
+                      {notification.data && (notification.data.order_id || notification.data.id) && (
                         <span className="order-id">
-                          Order #{notification.data.order_id}
+                          Order #{notification.data.order_id || notification.data.id}
                         </span>
                       )}
                     </div>
@@ -178,7 +153,7 @@ const NotificationBell = () => {
 
           {notifications.length > 0 && (
             <div className="notification-footer">
-              <small>Real-time updates enabled ✅</small>
+              <small>Click notifications to view details</small>
             </div>
           )}
         </div>

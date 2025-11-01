@@ -51,6 +51,46 @@ const NotificationProvider = ({ children }) => {
     }
   };
 
+  const handleNotificationClick = (notification) => {
+    console.log('🔔 Notification clicked:', notification);
+    
+    // Mark as read first
+    markAsRead(notification.id);
+    
+    // Prepare redirect data
+    let redirectData = {
+      tab: 'orders', // default tab
+      orderId: null
+    };
+    
+    switch (notification.type) {
+      case 'new_order':
+      case 'order_status':
+        redirectData.tab = 'orders';
+        redirectData.orderId = notification.data?.id || notification.data?.order_id;
+        break;
+        
+      case 'new_message':
+        redirectData.tab = 'chat';
+        redirectData.orderId = notification.data?.order_id;
+        break;
+        
+      default:
+        redirectData.tab = 'orders';
+    }
+    
+    // Store in localStorage for Dashboard to read
+    localStorage.setItem('notificationRedirect', JSON.stringify(redirectData));
+    
+    // Dispatch custom event for real-time navigation
+    const event = new CustomEvent('notificationNavigate', {
+      detail: redirectData
+    });
+    window.dispatchEvent(event);
+    
+    console.log('🔔 Navigation triggered:', redirectData);
+  };
+
   // ✅ BROWSER-GENERATED SOUND (FALLBACK - NO FILE NEEDED)
   const playBrowserSound = () => {
     try {
@@ -152,7 +192,8 @@ const NotificationProvider = ({ children }) => {
       markAllAsRead,
       clearAll,
       socket,
-      joinUserRoom
+      joinUserRoom,
+      handleNotificationClick // ← ADD THIS
     }}>
       {children}
     </NotificationContext.Provider>
@@ -207,18 +248,21 @@ function AppContent() {
       // Join user's notification room when logged in
       joinUserRoom(currentUser.id);
 
-      // Listen for new orders
-      socket.on('new_order', (orderData) => {
-        console.log('🔔 New order received:', orderData);
-        
-        addNotification({
-          type: 'new_order',
-          title: '🎉 New Order Received!',
-          message: `New order for: ${orderData.ad_title || 'Your Ad'}`,
-          data: orderData,
-          priority: 'high'
-        });
-      });
+// Listen for new orders
+socket.on('new_order', (orderData) => {
+  console.log('🔔 New order received:', orderData);
+  
+  // Add a small delay to avoid duplicates with frontend notifications
+  setTimeout(() => {
+    addNotification({
+      type: 'new_order',
+      title: '🎉 New Order!',
+      message: `${orderData.buyer_name} ordered ${orderData.amount} ${orderData.currency_from} for ${orderData.total_price} ${orderData.currency_to}`,
+      data: orderData,
+      priority: 'high'
+    });
+  }, 1000); // 1 second delay
+});
 
       // Listen for order status updates
       socket.on('order_status_updated', (statusData) => {
