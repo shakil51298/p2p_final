@@ -1,10 +1,42 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Marketplace from './Marketplace';
 import OrdersPage from './OrdersPage';
 import MyAds from './MyAds/MyAds';
+import NotificationBell from './NotificationBell/NotificationBell';
+import { useNotifications } from '../App';
+import io from 'socket.io-client';
+
 
 const Dashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const { addNotification } = useNotifications();
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    // Initialize Socket.io connection
+    const newSocket = io('http://localhost:50000');
+    setSocket(newSocket);
+
+    // Listen for notifications
+    newSocket.on('new_order', (orderData) => {
+      console.log('New Order Received:', orderData);
+
+      //show notification;
+      addNotification({
+        type: 'order',
+        title: 'New Order Received!',
+        message: `Someone placed an order on your ad: ${orderData.ad_title}`,
+        orderId: orderData.id
+      });
+    });
+
+    // Join user's personal room for notifications
+    newSocket.emit('join_user', user.id);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [user.id, addNotification]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -117,6 +149,7 @@ const Dashboard = ({ user, onLogout }) => {
           </nav>
 
           <div className="user-info">
+          <NotificationBell />
             <span>Welcome, <strong>{user.name}</strong>!</span>
             <button onClick={onLogout} className="logout-btn">
               Logout
