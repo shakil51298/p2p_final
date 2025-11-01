@@ -41,10 +41,22 @@ const Marketplace = ({ user }) => {
     fetchAds(); // Refresh the list
   };
 
-  const handleStartTrade = (ad) => {
-    console.log('Starting trade with ad:', ad);
-    setSelectedAd(ad);
-    setShowOrderModal(true);
+  const handleStartTrade = async (ad) => {
+    try {
+      console.log('🟡 Starting trade with ad:', ad.id);
+      
+      // ✅ INCREMENT VIEWS - This part stays the same
+      await axios.post(`http://localhost:50000/api/ads/${ad.id}/increment-views`);
+      
+      console.log('✅ View count incremented for ad:', ad.id);
+      setSelectedAd(ad);
+      setShowOrderModal(true);
+    } catch (error) {
+      console.error('🔴 Error incrementing views:', error);
+      // Still proceed with trade even if view increment fails
+      setSelectedAd(ad);
+      setShowOrderModal(true);
+    }
   };
 
   const handleOrderCreated = (order) => {

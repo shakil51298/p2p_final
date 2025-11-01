@@ -1,121 +1,99 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
+import { useQuery } from '@tanstack/react-query'; // ✅ ADD THIS IMPORT
 import EditAdModal from '../EditAdModal/EditAdModal';
 import './MyAds.css';
 
-const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
-  const [ads, setAds] = useState([]);
-  const [loading, setLoading] = useState(true);
+const MyAds = ({ user, onCreateAd }) => {
   const [activeTab, setActiveTab] = useState('all');
-  const [showEditModal, setShowEditModal] = useState(false); // Add this
-  const [selectedAd, setSelectedAd] = useState(null); // Add this
-  const [stats, setStats] = useState({
-    totalAds: 0,
-    activeAds: 0,
-    pausedAds: 0,
-    totalVolume: 0
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedAd, setSelectedAd] = useState(null);
+
+  // ✅ REPLACE useState/useEffect WITH REACT QUERY
+  const { 
+    data: ads = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: ['userAds', user.id],
+    queryFn: async () => {
+      const response = await axios.get(`http://localhost:50000/api/ads/user/${user.id}`);
+      return response.data;
+    },
+    refetchInterval: 10000, // ✅ AUTO-REFRESH EVERY 10 SECONDS
+    enabled: !!user, // ✅ ONLY FETCH IF USER EXISTS
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchUserAds();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    calculateStats();
-  }, [ads]);
-
-  const fetchUserAds = async () => {
-    try {
-      setLoading(true);
-      console.log('🟡 Fetching ads for user:', user.id);
-      
-      const response = await axios.get(`http://localhost:50000/api/ads/user/${user.id}`);
-      console.log('📨 API Response:', response.data);
-      
-      setAds(response.data);
-    } catch (error) {
-      console.error('🔴 Error fetching ads:', error);
-      if (error.response) {
-        console.error('🔴 Server response:', error.response.data);
-      }
-      setAds([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ✅ CALCULATE STATS FROM ADS DATA
   const calculateStats = () => {
     if (ads.length === 0) {
-      setStats({
+      return {
         totalAds: 0,
         activeAds: 0,
         pausedAds: 0,
-        totalVolume: 0
-      });
-      return;
+        totalVolume: 0,
+        totalViews: 0
+      };
     }
 
     const totalAds = ads.length;
     const activeAds = ads.filter(ad => ad.status === 'active').length;
     const pausedAds = ads.filter(ad => ad.status === 'paused').length;
     const totalVolume = ads.reduce((sum, ad) => sum + parseFloat(ad.total_trades || 0), 0);
+    const totalViews = ads.reduce((sum, ad) => sum + parseInt(ad.views || 0), 0);
 
-    setStats({
-      totalAds,
-      activeAds,
-      pausedAds,
-      totalVolume
-    });
+    return { totalAds, activeAds, pausedAds, totalVolume, totalViews };
   };
 
+  const stats = calculateStats();
+
+  // ✅ AD MANAGEMENT FUNCTIONS
   const handleEditAd = (ad) => {
     setSelectedAd(ad);
     setShowEditModal(true);
   };
 
-    // Add this function for when ad is updated
-    const handleAdUpdated = () => {
-      fetchUserAds(); // Refresh the ads list
-    };
+  const handleAdUpdated = () => {
+    refetch(); // ✅ REFRESH DATA AFTER EDIT
+  };
 
   const handlePauseAd = async (adId) => {
     try {
-      const response = await axios.post(`http://localhost:50000/api/ads/${adId}/pause`);
-      console.log('✅ Ad paused:', response.data);
-      alert('Ad paused successfully!');
-      fetchUserAds();
+      await axios.post(`http://localhost:50000/api/ads/${adId}/pause`);
+      alert('Ad paused successfully! It will be hidden from the marketplace.');
+      refetch(); // ✅ REFRESH DATA AFTER PAUSE
     } catch (error) {
-      console.error('🔴 Error:', error.response?.data);
-      alert('Failed to pause ad.');
+      console.error('🔴 Error pausing ad:', error);
+      alert('Failed to pause ad. Please try again.');
     }
   };
-  
+
   const handleResumeAd = async (adId) => {
     try {
-      const response = await axios.post(`http://localhost:50000/api/ads/${adId}/resume`);
-      console.log('✅ Ad resumed:', response.data);
-      alert('Ad resumed successfully!');
-      fetchUserAds();
+      await axios.post(`http://localhost:50000/api/ads/${adId}/resume`);
+      alert('Ad resumed successfully! It is now visible in the marketplace.');
+      refetch(); // ✅ REFRESH DATA AFTER RESUME
     } catch (error) {
-      console.error('🔴 Error:', error.response?.data);
-      alert('Failed to resume ad.');
+      console.error('🔴 Error resuming ad:', error);
+      alert('Failed to resume ad. Please try again.');
     }
   };
-  
+
   const handleDeleteAd = async (adId) => {
     if (window.confirm('Are you sure you want to delete this ad? This action cannot be undone.')) {
       try {
         await axios.delete(`http://localhost:50000/api/ads/${adId}`);
-        fetchUserAds();
+        alert('Ad deleted successfully!');
+        refetch(); // ✅ REFRESH DATA AFTER DELETE
       } catch (error) {
-        console.error('Error deleting ad:', error);
-        alert('Failed to delete ad');
+        console.error('🔴 Error deleting ad:', error);
+        alert('Failed to delete ad. Please try again.');
       }
     }
   };
 
+  // ✅ HELPER FUNCTIONS
   const getFilteredAds = () => {
     switch (activeTab) {
       case 'active':
@@ -147,7 +125,19 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
       : <span className="trade-type-badge sell">Sell</span>;
   };
 
-  if (loading) {
+  const formatViews = (views) => {
+    if (!views) return '0';
+    if (views >= 1000000) {
+      return (views / 1000000).toFixed(1) + 'M';
+    }
+    if (views >= 1000) {
+      return (views / 1000).toFixed(1) + 'K';
+    }
+    return views.toString();
+  };
+
+  // ✅ LOADING STATE
+  if (isLoading) {
     return (
       <div className="my-ads-container">
         <div className="loading-spinner">Loading your ads...</div>
@@ -155,6 +145,22 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
     );
   }
 
+  // ✅ ERROR STATE
+  if (error) {
+    return (
+      <div className="my-ads-container">
+        <div className="error-message">
+          <h3>Error loading ads</h3>
+          <p>Failed to load your ads. Please try again.</p>
+          <button onClick={refetch} className="retry-btn">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ MAIN COMPONENT RENDER
   return (
     <div className="my-ads-container">
       <div className="my-ads-header">
@@ -182,8 +188,8 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
           <div className="stat-label">Paused Ads</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats.totalVolume}</div>
-          <div className="stat-label">Total Trades</div>
+          <div className="stat-value">{formatViews(stats.totalViews)}</div>
+          <div className="stat-label">Total Views</div>
         </div>
       </div>
 
@@ -258,12 +264,13 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
                   ) : null}
                   
                   <button 
-                      className="action-btn edit"
-                      onClick={() => handleEditAd(ad)} // Pass the entire ad object
-                      title="Edit Ad Details"
-                    >
-                      ✏️ Edit
-                    </button>
+                    className="action-btn edit"
+                    onClick={() => handleEditAd(ad)}
+                    title="Edit Ad Details"
+                  >
+                    ✏️ Edit
+                  </button>
+                  
                   <button 
                     className="action-btn delete"
                     onClick={() => handleDeleteAd(ad.id)}
@@ -327,27 +334,28 @@ const MyAds = ({ user, onEditAd, onViewAd, onCreateAd }) => {
 
               <div className="ad-footer">
                 <div className="ad-performance">
-                  <span className="performance-item">
-                    👁️ {ad.views || 0} views
+                  <span className="performance-item views-count" title={`${ad.views || 0} people viewed this ad`}>
+                    👁️ {formatViews(ad.views || 0)} views
                   </span>
                   <span className="performance-item">
                     💬 {ad.inquiries || 0} inquiries
                   </span>
                   <span className="performance-item">
-                    ✅ {ad.completed_trades || 0} completed
+                    ✅ {ad.completed_trades || 0} completed trades
                   </span>
                 </div>
-                <button 
-                  className="view-details-btn"
-                  onClick={() => onViewAd && onViewAd(ad.id)}
-                >
-                  View Details
-                </button>
+                <div className="ad-status-info">
+                  <span className="marketplace-status">
+                    {ad.status === 'active' ? '🟢 Visible in Marketplace' : '🔴 Hidden from Marketplace'}
+                  </span>
+                </div>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Edit Ad Modal */}
       {showEditModal && selectedAd && (
         <EditAdModal
           ad={selectedAd}

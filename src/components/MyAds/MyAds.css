@@ -422,3 +422,95 @@
     gap: 10px;
   }
 }
+
+.views-count {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.stat-card:nth-child(4) {
+  border-left-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.stat-card:nth-child(4) .stat-value,
+.stat-card:nth-child(4) .stat-label {
+  color: white;
+}
+
+.ad-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+}
+
+.ad-performance {
+  display: flex;
+  gap: 20px;
+}
+
+.ad-status-info {
+  text-align: right;
+}
+
+.marketplace-status {
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #f8f9fa;
+}
+
+.views-count {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.performance-item {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Highlight the views stat card */
+.stat-card:nth-child(4) {
+  border-left-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.stat-card:nth-child(4) .stat-value,
+.stat-card:nth-child(4) .stat-label {
+  color: white;
+}
+
+.my-ads-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.refresh-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.refresh-btn:hover {
+  background: #5a6268;
+  transform: rotate(45deg);
+}
